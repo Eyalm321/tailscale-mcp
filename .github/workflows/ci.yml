@@ -252,4 +252,4 @@ jobs:
       - name: Run dependency vulnerability check
         run: |
           echo "🔍 Running dependency vulnerability check..."
-          bunx audit-ci --moderate
+          bun audit --audit-level=moderate
