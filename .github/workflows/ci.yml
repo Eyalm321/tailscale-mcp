@@ -205,7 +205,6 @@ jobs:
       - name: Verify build artifacts
         run: |
           test -f dist/index.js
-          test -f dist/index.cjs
           echo "✅ Build artifacts verified"
 
       - name: Upload build artifacts
@@ -248,9 +247,9 @@ jobs:
       - name: Run security audit
         run: |
           echo "🔍 Running security audit..."
-          bun audit || echo "⚠️ Audit found issues but continuing..."
+          bun audit
 
       - name: Run dependency vulnerability check
         run: |
           echo "🔍 Running dependency vulnerability check..."
-          bunx audit-ci --moderate || echo "⚠️ Vulnerability check found issues but continuing..."
+          bunx audit-ci --moderate

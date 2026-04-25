@@ -53,7 +53,7 @@ describe("TailscaleCLI Security Tests (integration)", () => {
         "host.example.com",
         "192.168.1.1",
         "node-123",
-        "test-server.local",
+        "test-server.internal",
       ];
 
       // Note: These will fail at execution but should pass validation

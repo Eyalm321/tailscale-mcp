@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { logger } from "../logger.js";
+import { redact } from "../observability/redaction.js";
 import {
   type CLIResponse,
   type TailscaleCLIStatus,
@@ -39,7 +40,7 @@ export class TailscaleCLI {
         }
       }
 
-      logger.debug(`Executing: ${this.cliPath} ${args.join(" ")}`);
+      logger.debug("Executing Tailscale CLI", redact([this.cliPath, ...args]));
 
       const { stdout, stderr } = await execFileAsync(this.cliPath, args, {
         encoding: "utf8",
@@ -237,7 +238,12 @@ export class TailscaleCLI {
       );
     }
 
-    return await this.executeCommand(["ping", target, "-c", count.toString()]);
+    return await this.executeCommand([
+      "ping",
+      `--c=${count}`,
+      "--timeout=1s",
+      target,
+    ]);
   }
 
   /**

@@ -23,7 +23,7 @@ const baseConfig = {
   entryPoints: ["src/index.ts"],
   bundle: true,
   platform: "node",
-  target: "node18",
+  target: "esnext",
   sourcemap: true,
   minify: false,
   external: [
@@ -44,7 +44,7 @@ const esmConfig = {
   outfile: "dist/index.js",
   // Banner to add shebang for executable
   banner: {
-    js: "#!/usr/bin/env node\n// Tailscale MCP Server - Built with esbuild",
+    js: "#!/usr/bin/env bun\n// Tailscale MCP Server - Built with esbuild",
   },
 };
 
@@ -108,7 +108,7 @@ export const watchConfig = {
 };
 
 // Build function
-export async function buildProject(configs = [prodEsmConfig, prodCjsConfig]) {
+export async function buildProject(configs = [prodEsmConfig]) {
   try {
     // Ensure configs is an array
     const configArray = Array.isArray(configs) ? configs : [configs];
@@ -155,7 +155,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       break;
     case "build":
     default:
-      await buildProject([prodEsmConfig, prodCjsConfig]);
+      await buildProject([prodEsmConfig]);
       break;
   }
 }

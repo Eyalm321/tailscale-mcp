@@ -18,17 +18,15 @@ mock.module("fs/promises", () => ({
 
 describe("Logger", () => {
   let logger: Logger;
-  let consoleSpy: Mock<typeof console.info>;
+  let stderrSpy: Mock<typeof process.stderr.write>;
 
   beforeEach(() => {
     // Reset environment variables
     process.env.MCP_SERVER_LOG_FILE = undefined;
 
-    // Create fresh spies for console methods
-    consoleSpy = spyOn(console, "info").mockImplementation(() => {});
-    spyOn(console, "debug").mockImplementation(() => {});
-    spyOn(console, "warn").mockImplementation(() => {});
-    spyOn(console, "error").mockImplementation(() => {});
+    stderrSpy = spyOn(process.stderr, "write").mockImplementation(
+      () => true,
+    ) as Mock<typeof process.stderr.write>;
 
     // Create a fresh logger instance with known level
     logger = new Logger(LogLevel.INFO);
@@ -59,18 +57,15 @@ describe("Logger", () => {
 
   describe("setLevel", () => {
     test("should update log level", () => {
-      const debugSpy = spyOn(console, "debug");
-
       // Initially at INFO level, debug should not log
       logger.debug("test debug message");
-      expect(debugSpy).not.toHaveBeenCalled();
+      expect(stderrSpy).not.toHaveBeenCalled();
 
       // Change to DEBUG level, now debug should log
       logger.setLevel(LogLevel.DEBUG);
       logger.debug("test debug message after level change");
-      expect(debugSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[DEBUG]"),
-        "test debug message after level change",
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("test debug message after level change"),
       );
     });
   });
@@ -78,43 +73,34 @@ describe("Logger", () => {
   describe("logging methods", () => {
     test("should log info messages when level is INFO", () => {
       logger.info("test info message");
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[INFO]"),
-        "test info message",
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("test info message"),
       );
     });
 
     test("should not log debug messages when level is INFO", () => {
-      const debugSpy = spyOn(console, "debug");
       logger.debug("test debug message");
-      expect(debugSpy).not.toHaveBeenCalled();
+      expect(stderrSpy).not.toHaveBeenCalled();
     });
 
     test("should log warn messages", () => {
-      const warnSpy = spyOn(console, "warn");
       logger.warn("test warning");
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[WARN]"),
-        "test warning",
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("test warning"),
       );
     });
 
     test("should log error messages", () => {
-      const errorSpy = spyOn(console, "error");
       logger.error("test error");
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[ERROR]"),
-        "test error",
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("test error"),
       );
     });
 
     test("should format messages with additional arguments", () => {
       logger.info("test message", "arg1", { key: "value" });
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[INFO]"),
-        "test message",
-        "arg1",
-        { key: "value" },
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"key": "value"'),
       );
     });
   });
@@ -123,10 +109,8 @@ describe("Logger", () => {
     test("should log objects with proper formatting", () => {
       const testObj = { name: "test", value: 123 };
       logger.logObject(LogLevel.INFO, "Test object:", testObj);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[INFO]"),
-        expect.stringContaining("Test object:"),
-        expect.stringContaining(JSON.stringify(testObj, null, 2)),
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"name": "test"'),
       );
     });
   });

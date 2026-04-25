@@ -1,69 +1,26 @@
-#
-# ---- Builder Stage ----
-# This stage installs dependencies (including devDependencies)
-# and builds the application source code.
-#
-FROM oven/bun:1-alpine AS builder
-
+FROM oven/bun:1-alpine AS deps
 WORKDIR /app
-
-# Copy package files and install all dependencies for the build
-COPY package.json bun.lock* ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-# Copy the rest of the application source code
+FROM deps AS build
 COPY . .
+RUN bun run qa
 
-# Run the build script to transpile TypeScript to JavaScript
-RUN bun run build
-
-# Remove dev dependencies
-RUN bun install --production --frozen-lockfile
-
-#
-# ---- Production Stage ----
-# This stage creates the final, lean image by copying only the
-# necessary artifacts from the builder stage.
-#
-FROM node:20-alpine AS production
-
-# Install dumb-init for proper PID 1 signal handling
-RUN apk add --no-cache dumb-init
-
-# Create a dedicated, non-root user and group for the application
-RUN addgroup -S appgroup -g 1001 && \
-  adduser -S appuser -u 1001 -G appgroup
-
+FROM oven/bun:1-alpine AS production
 WORKDIR /app
-
-# Copy production dependencies from the builder stage. This is faster
-# and more reliable than re-installing them.
-COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
-
-# Copy the compiled application code from the builder stage
-COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
-
-# Copy other project files like README and LICENSE
-COPY --from=builder --chown=appuser:appgroup /app/README.md ./
-COPY --from=builder --chown=appuser:appgroup /app/LICENSE ./
-
-# Switch to the non-root user for enhanced security
-USER appuser
-
-# Expose the port the application will run on
-EXPOSE 3000
-
-# A basic health check to ensure the Node.js process can start.
-# For a real-world app, this should hit a dedicated /health endpoint.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD bun -e "process.exit(0)" || exit 1
-
-# Set environment variables for the production environment
 ENV NODE_ENV=production
-ENV LOG_LEVEL=1
+ENV MCP_TRANSPORT=http
+ENV MCP_HTTP_BIND_HOST=127.0.0.1
+ENV MCP_HTTP_PORT=3000
 
-# Use dumb-init as the entrypoint to manage the bun node process
-ENTRYPOINT ["dumb-init", "--"]
+COPY --from=build /app/dist ./dist
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json README.md LICENSE ./
 
-# The command to start the application
-CMD ["bun", "dist/index.js"]
+USER bun
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD bun -e "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["bun", "dist/index.js", "--http", "--host", "127.0.0.1", "--port", "3000"]
