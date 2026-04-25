@@ -54,9 +54,7 @@
     "qa": "bun run typecheck && bun run test:unit && bun run check",
     "qa:full": "bun run typecheck && bun run test && bun run check",
     "inspector": "bunx @modelcontextprotocol/inspector bun dist/index.js",
-    "prepublishOnly": "bun run build",
-    "publish": "./scripts/publish.sh",
-    "publish:test": "./scripts/test-publish.sh"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
