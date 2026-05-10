@@ -114,8 +114,10 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
         run: |
-          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+          if [ -z "${NPM_CONFIG_TOKEN}" ]; then
             echo "NPM_TOKEN is required to publish."
             exit 1
           fi
