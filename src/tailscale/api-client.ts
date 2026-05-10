@@ -19,9 +19,12 @@ export class TailscaleApiClient {
     this.oauth = new OAuthTokenProvider(config, logger);
   }
 
-  async listDevices(): Promise<ApiResult<unknown[]>> {
+  async listDevices(
+    options: { includeRoutes?: boolean } = {},
+  ): Promise<ApiResult<unknown[]>> {
+    const fields = options.includeRoutes ? "?fields=all" : "";
     const result = await this.request<{ devices?: unknown[] }>(
-      `/tailnet/${this.tailnet}/devices`,
+      `/tailnet/${this.tailnet}/devices${fields}`,
     );
     if (!result.success) {
       return result as ApiResult<unknown[]>;
@@ -55,13 +58,16 @@ export class TailscaleApiClient {
     });
   }
 
+  async getDeviceRoutes(deviceId: string): Promise<ApiResult<unknown>> {
+    return this.request(`/device/${encodeURIComponent(deviceId)}/routes`);
+  }
+
   async setDeviceRoutes(
     deviceId: string,
     routes: string[],
-    enabled: boolean,
   ): Promise<ApiResult<unknown>> {
     return this.request(`/device/${encodeURIComponent(deviceId)}/routes`, {
-      method: enabled ? "POST" : "DELETE",
+      method: "POST",
       json: { routes },
     });
   }

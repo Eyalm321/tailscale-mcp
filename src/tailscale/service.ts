@@ -31,9 +31,11 @@ export class TailscaleService {
   }
 
   async listDevices(
-    options: { includeOffline?: boolean } = {},
+    options: { includeOffline?: boolean; includeRoutes?: boolean } = {},
   ): Promise<DeviceSummary[]> {
-    const apiResult = await this.api.listDevices();
+    const apiResult = await this.api.listDevices({
+      includeRoutes: options.includeRoutes,
+    });
     if (apiResult.success) {
       return (apiResult.data ?? []).map(normalizeDevice).filter((device) => {
         return (options.includeOffline ?? true)
@@ -90,7 +92,23 @@ export class TailscaleService {
     routes: string[],
     enabled: boolean,
   ): Promise<string> {
-    const result = await this.api.setDeviceRoutes(deviceId, routes, enabled);
+    const currentRoutes = await this.api.getDeviceRoutes(deviceId);
+    if (!currentRoutes.success) {
+      throw new Error(currentRoutes.error ?? "Failed to get current routes");
+    }
+
+    const enabledRoutes = new Set(
+      readStringArray(currentRoutes.data, "enabledRoutes"),
+    );
+    for (const route of routes) {
+      if (enabled) {
+        enabledRoutes.add(route);
+      } else {
+        enabledRoutes.delete(route);
+      }
+    }
+
+    const result = await this.api.setDeviceRoutes(deviceId, [...enabledRoutes]);
     if (!result.success) {
       throw new Error(result.error ?? "Failed to update routes");
     }
@@ -177,4 +195,15 @@ export class TailscaleService {
       devices,
     };
   }
+}
+
+function readStringArray(value: unknown, key: string): string[] {
+  const record =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  const routes = record[key];
+  return Array.isArray(routes)
+    ? routes.filter((route): route is string => typeof route === "string")
+    : [];
 }
