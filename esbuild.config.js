@@ -13,10 +13,7 @@ try {
   const packageJsonPath = resolve(process.cwd(), "package.json");
   packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
 } catch (error) {
-  console.warn(
-    "Warning: Could not read package.json dependencies:",
-    error.message,
-  );
+  console.warn("Warning: Could not read package.json dependencies:", error.message);
 }
 
 const baseConfig = {
@@ -114,9 +111,7 @@ export async function buildProject(configs = [prodEsmConfig]) {
     const configArray = Array.isArray(configs) ? configs : [configs];
 
     // Build all configurations
-    const results = await Promise.all(
-      configArray.map((config) => build(config)),
-    );
+    const results = await Promise.all(configArray.map((config) => build(config)));
 
     console.log("✅ Build completed successfully");
 

@@ -24,9 +24,7 @@ export class TailscaleMCPCLI {
         return parsedPort;
       }
       throw new Error(
-        `Invalid port number: ${
-          args[portIndex + 1]
-        }. Port must be between 1 and 65535.`,
+        `Invalid port number: ${args[portIndex + 1]}. Port must be between 1 and 65535.`,
       );
     }
     return undefined;

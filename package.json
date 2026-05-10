@@ -1,6 +1,6 @@
 {
   "name": "@hexsleeves/tailscale-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Model Context Protocol (MCP) server that provides seamless integration with Tailscale's CLI commands and REST API, enabling automated network management and monitoring through a standardized interface.",
   "keywords": [
     "tailscale",
@@ -83,6 +83,9 @@
   "overrides": {
     "@hono/node-server": "1.19.14",
     "ajv": "8.20.0",
+    "fast-uri": "3.1.2",
+    "hono": "4.12.18",
+    "ip-address": "10.2.0",
     "path-to-regexp": "8.4.2",
     "qs": "6.15.1"
   }
