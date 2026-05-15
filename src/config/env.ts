@@ -1,3 +1,4 @@
+import net from "node:net";
 import { z } from "zod";
 
 export const ToolRiskSchema = z.enum(["read", "write", "admin"]);
@@ -20,13 +21,17 @@ const EnvSchema = z
           if (url.protocol === "https:") {
             return true;
           }
+          if (url.protocol !== "http:") {
+            return false;
+          }
+          // WHATWG URL keeps brackets around IPv6 hosts (e.g. "[::1]").
+          const host = url.hostname.replace(/^\[|\]$/g, "");
           // Permit plain HTTP only for loopback (local dev / mock servers);
           // anything else would transmit the API key / OAuth secret in cleartext.
           return (
-            url.protocol === "http:" &&
-            (url.hostname === "localhost" ||
-              url.hostname === "127.0.0.1" ||
-              url.hostname === "::1")
+            host === "localhost" ||
+            (net.isIPv4(host) && host === "127.0.0.1") ||
+            (net.isIPv6(host) && host === "::1")
           );
         },
         {
