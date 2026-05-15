@@ -14,6 +14,26 @@ const EnvSchema = z
     TAILSCALE_API_BASE_URL: z
       .string()
       .url()
+      .refine(
+        (value) => {
+          const url = new URL(value);
+          if (url.protocol === "https:") {
+            return true;
+          }
+          // Permit plain HTTP only for loopback (local dev / mock servers);
+          // anything else would transmit the API key / OAuth secret in cleartext.
+          return (
+            url.protocol === "http:" &&
+            (url.hostname === "localhost" ||
+              url.hostname === "127.0.0.1" ||
+              url.hostname === "::1")
+          );
+        },
+        {
+          message:
+            "TAILSCALE_API_BASE_URL must use https (http allowed only for localhost)",
+        },
+      )
       .default("https://api.tailscale.com"),
     TAILSCALE_API_KEY: z.string().optional(),
     TAILSCALE_OAUTH_CLIENT_ID: z.string().optional(),
