@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { AppLogger } from "../observability/logger.js";
 import { redact } from "../observability/redaction.js";
 import {
@@ -5,6 +7,8 @@ import {
   validateStringInput,
   validateTarget,
 } from "../utils.js";
+
+const execFileAsync = promisify(execFile);
 
 export interface CliResult<T = string> {
   success: boolean;
@@ -121,29 +125,33 @@ export class TailscaleCliClient {
       redact([this.cliPath, ...args]),
     );
 
-    const proc = Bun.spawn([this.cliPath, ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    try {
+      const { stdout, stderr } = await execFileAsync(this.cliPath, args, {
+        encoding: "utf8",
+        maxBuffer: 10 * 1024 * 1024,
+        timeout: 30_000,
+        windowsHide: true,
+      });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
+      return {
+        success: true,
+        data: stdout.trim(),
+        stderr: stderr.trim() || undefined,
+      };
+    } catch (error) {
+      const err = error as Error & {
+        code?: number | string;
+        stderr?: string;
+      };
+      const stderr =
+        typeof err.stderr === "string" ? err.stderr.trim() : "";
 
-    if (exitCode !== 0) {
       return {
         success: false,
-        error: stderr.trim() || `tailscale exited with code ${exitCode}`,
-        stderr: stderr.trim(),
+        error:
+          stderr || err.message || `tailscale exited with code ${err.code}`,
+        stderr: stderr || undefined,
       };
     }
-
-    return {
-      success: true,
-      data: stdout.trim(),
-      stderr: stderr.trim() || undefined,
-    };
   }
 }

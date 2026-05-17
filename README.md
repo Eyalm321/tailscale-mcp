@@ -1,6 +1,6 @@
 # Tailscale MCP Server
 
-A Bun-based [Model Context Protocol](https://modelcontextprotocol.io/) server
+A [Model Context Protocol](https://modelcontextprotocol.io/) server
 for operating Tailscale from MCP clients.
 
 It supports local `stdio` usage for desktop clients and an authenticated HTTP
@@ -27,7 +27,7 @@ access, localhost binding, and short-lived OAuth credentials where available.
 
 ## Requirements
 
-- Bun 1.3 or newer.
+- Node.js 20 or newer to run (`npx`). Bun also works.
 - Tailscale API access through one of:
   - OAuth client credentials: `TAILSCALE_OAUTH_CLIENT_ID` and
     `TAILSCALE_OAUTH_CLIENT_SECRET`.
@@ -40,9 +40,9 @@ access, localhost binding, and short-lived OAuth credentials where available.
 From npm (unscoped, default registry):
 
 ```bash
-bunx tailscale-mcp-server
-# or add as a dependency
-bun add tailscale-mcp-server
+npx -y tailscale-mcp-server
+# or install
+npm install -g tailscale-mcp-server
 ```
 
 From GitHub Packages (scoped). Add to `.npmrc`:
@@ -54,7 +54,7 @@ From GitHub Packages (scoped). Add to `.npmrc`:
 then:
 
 ```bash
-bun add @eyalm321/tailscale-mcp-server
+npm install @eyalm321/tailscale-mcp-server
 ```
 
 ## MCP Client Setup
@@ -65,8 +65,8 @@ Use `stdio` for local MCP clients.
 {
   "mcpServers": {
     "tailscale": {
-      "command": "bunx",
-      "args": ["tailscale-mcp-server"],
+      "command": "npx",
+      "args": ["-y", "tailscale-mcp-server"],
       "env": {
         "TAILSCALE_OAUTH_CLIENT_ID": "your-client-id",
         "TAILSCALE_OAUTH_CLIENT_SECRET": "your-client-secret",
@@ -83,8 +83,8 @@ For API key compatibility:
 {
   "mcpServers": {
     "tailscale": {
-      "command": "bunx",
-      "args": ["tailscale-mcp-server"],
+      "command": "npx",
+      "args": ["-y", "tailscale-mcp-server"],
       "env": {
         "TAILSCALE_API_KEY": "tskey-...",
         "TAILSCALE_TAILNET": "-"
@@ -106,7 +106,7 @@ export TAILSCALE_OAUTH_CLIENT_ID="your-client-id"
 export TAILSCALE_OAUTH_CLIENT_SECRET="your-client-secret"
 export TAILSCALE_TAILNET="-"
 
-bun run src/index.ts --http --host 127.0.0.1 --port 3000
+npx -y tailscale-mcp-server --http --host 127.0.0.1 --port 3000
 ```
 
 Expose HTTP mode privately with Tailscale Serve:
@@ -192,6 +192,8 @@ For a sidecar deployment that exposes the server with private Tailscale Serve,
 see [deploy/README.md](deploy/README.md).
 
 ## Development
+
+Build/test toolchain uses Bun:
 
 ```bash
 bun install
