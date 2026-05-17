@@ -1,512 +1,214 @@
 # Tailscale MCP Server
 
-<p align="center">
-  <a href="https://glama.ai/mcp/servers/@HexSleeves/tailscale-mcp">
-    <img
-      width="380"
-      height="200"
-      src="https://glama.ai/mcp/servers/@HexSleeves/tailscale-mcp/badge"
-      alt="Tailscale Server MCP server"
-    />
-  </a>
-</p>
+A Bun-based [Model Context Protocol](https://modelcontextprotocol.io/) server
+for operating Tailscale from MCP clients.
 
-A modern [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that provides seamless integration with Tailscale's CLI commands and REST API, enabling automated network management and monitoring through a standardized interface.
+It supports local `stdio` usage for desktop clients and an authenticated HTTP
+transport for private tailnet deployments. The server defaults to read-only
+access, localhost binding, and short-lived OAuth credentials where available.
 
-## 📦 Available Packages
-
-- **NPM**: [`@hexsleeves/tailscale-mcp-server`](https://www.npmjs.com/package/@hexsleeves/tailscale-mcp-server)
-- **Docker Hub**: [`hexsleeves/tailscale-mcp-server`](https://hub.docker.com/r/hexsleeves/tailscale-mcp-server)
-- **GitHub Container Registry**: [`ghcr.io/hexsleeves/tailscale-mcp-server`](https://github.com/users/HexSleeves/packages/container/package/tailscale-mcp-server)
+> **Fork notice.** Security-hardened fork of
+> [HexSleeves/tailscale-mcp](https://github.com/HexSleeves/tailscale-mcp): adds
+> REST path-segment encoding, https enforcement for `TAILSCALE_API_BASE_URL`,
+> rate-limit bucket eviction, and removes the unused legacy server stack.
+> Distributed as `tailscale-mcp-server` (npm) and
+> `@eyalm321/tailscale-mcp-server` (GitHub Packages).
 
 ## Features
 
-- **Device Management**: List, authorize, deauthorize, and manage Tailscale devices
-- **Network Operations**: Connect/disconnect, manage routes, and monitor network status
-- **Security Controls**: Manage ACLs, device tags, and network lock settings
-- **Modern Architecture**: Modular tool system with TypeScript and Zod validation
-- **CLI Integration**: Direct integration with Tailscale CLI commands
-- **API Integration**: REST API support for advanced operations
+- Tailscale device, route, DNS, ACL, key, webhook, exit-node, and tag management.
+- Read-only MCP resources for tailnet summaries, devices, and ACL state.
+- MCP prompts for connectivity diagnosis and ACL review.
+- Risk-gated tools: `read`, `write`, and `admin`.
+- OAuth client credentials with API key compatibility.
+- Private HTTP mode with bearer auth, host validation, request limits, and health
+  checks.
+- Docker support for local builds and private Tailscale Serve deployments.
 
-## Quick Start
+## Requirements
 
-### Option 1: NPX (Recommended)
+- Bun 1.3 or newer.
+- Tailscale API access through one of:
+  - OAuth client credentials: `TAILSCALE_OAUTH_CLIENT_ID` and
+    `TAILSCALE_OAUTH_CLIENT_SECRET`.
+  - Legacy API key: `TAILSCALE_API_KEY`.
+- Local Tailscale CLI for CLI-backed tools such as status, ping, connect, and
+  disconnect.
 
-Run directly without installation:
+## Install
 
-```bash
-# Method 1: Explicit package syntax (most reliable)
-npx --package=@hexsleeves/tailscale-mcp-server tailscale-mcp-server
-
-# Method 2: Direct syntax (may work depending on npx version)
-npx -y @hexsleeves/tailscale-mcp-server
-```
-
-> **Note**: Method 1 with `--package=` syntax is more reliable across different npx versions and environments.
-
-Or install globally:
+From npm (unscoped, default registry):
 
 ```bash
-npm install -g @hexsleeves/tailscale-mcp-server
-tailscale-mcp-server
+bunx tailscale-mcp-server
+# or add as a dependency
+bun add tailscale-mcp-server
 ```
 
-### Option 2: Docker
+From GitHub Packages (scoped). Add to `.npmrc`:
 
-#### Docker Hub
+```
+@eyalm321:registry=https://npm.pkg.github.com
+```
+
+then:
 
 ```bash
-# Pull and run from Docker Hub
-docker run -d \
-  --name tailscale-mcp \
-  -e TAILSCALE_API_KEY=your_api_key \
-  -e TAILSCALE_TAILNET=your_tailnet \
-  hexsleeves/tailscale-mcp-server:latest
+bun add @eyalm321/tailscale-mcp-server
 ```
 
-#### GitHub Container Registry
+## MCP Client Setup
+
+Use `stdio` for local MCP clients.
+
+```json
+{
+  "mcpServers": {
+    "tailscale": {
+      "command": "bunx",
+      "args": ["tailscale-mcp-server"],
+      "env": {
+        "TAILSCALE_OAUTH_CLIENT_ID": "your-client-id",
+        "TAILSCALE_OAUTH_CLIENT_SECRET": "your-client-secret",
+        "TAILSCALE_TAILNET": "-"
+      }
+    }
+  }
+}
+```
+
+For API key compatibility:
+
+```json
+{
+  "mcpServers": {
+    "tailscale": {
+      "command": "bunx",
+      "args": ["tailscale-mcp-server"],
+      "env": {
+        "TAILSCALE_API_KEY": "tskey-...",
+        "TAILSCALE_TAILNET": "-"
+      }
+    }
+  }
+}
+```
+
+## HTTP Transport
+
+HTTP mode is intended for private tailnet access. It requires
+`MCP_HTTP_BEARER_TOKEN` and binds to `127.0.0.1` by default.
 
 ```bash
-# Pull and run from GitHub Container Registry
-docker run -d \
-  --name tailscale-mcp \
-  -e TAILSCALE_API_KEY=your_api_key \
-  -e TAILSCALE_TAILNET=your_tailnet \
-  ghcr.io/hexsleeves/tailscale-mcp-server:latest
+export MCP_TRANSPORT=http
+export MCP_HTTP_BEARER_TOKEN="$(openssl rand -base64 32)"
+export TAILSCALE_OAUTH_CLIENT_ID="your-client-id"
+export TAILSCALE_OAUTH_CLIENT_SECRET="your-client-secret"
+export TAILSCALE_TAILNET="-"
+
+bun run src/index.ts --http --host 127.0.0.1 --port 3000
 ```
 
-#### Docker Compose
+Expose HTTP mode privately with Tailscale Serve:
 
 ```bash
-# Use the included docker-compose.yml
-docker-compose up -d
+tailscale serve --bg 443 localhost:3000
 ```
+
+Do not use Funnel for normal MCP operation. Funnel makes the endpoint publicly
+reachable and should be reviewed separately.
 
 ## Configuration
 
-### Claude Desktop
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MCP_TRANSPORT` | `stdio` | Transport mode: `stdio` or `http`. |
+| `MCP_HTTP_BIND_HOST` | `127.0.0.1` | HTTP bind host. |
+| `MCP_HTTP_PORT` | `3000` | HTTP bind port. |
+| `MCP_HTTP_BEARER_TOKEN` |  | Required for HTTP mode. |
+| `MCP_ALLOWED_HOSTS` |  | Comma-separated additional allowed HTTP Host values. |
+| `TAILSCALE_TAILNET` | `-` | Tailnet name or `-` shorthand. |
+| `TAILSCALE_API_BASE_URL` | `https://api.tailscale.com` | Tailscale API base URL. |
+| `TAILSCALE_OAUTH_CLIENT_ID` |  | Preferred auth method. |
+| `TAILSCALE_OAUTH_CLIENT_SECRET` |  | Preferred auth method. |
+| `TAILSCALE_API_KEY` |  | API key fallback. |
+| `TAILSCALE_ALLOWED_TOOL_RISK` | `read` | Maximum allowed tool risk: `read`, `write`, or `admin`. |
+| `TAILSCALE_CLI_PATH` | `tailscale` | Local Tailscale CLI path. |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
+| `MCP_SERVER_LOG_FILE` |  | Optional file log path. |
 
-Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`):
+Risk levels:
 
-#### Using NPX (Recommended)
+- `read`: list devices, inspect status, read resources, and run diagnostics.
+- `write`: update ACLs, DNS, routes, policy files, webhooks, tags, and other
+  mutating tailnet settings.
+- `admin`: destructive or host-affecting operations such as delete,
+  deauthorize, connect, disconnect, auth key mutation, and file sharing changes.
 
-```json
-{
-  "mcpServers": {
-    "tailscale": {
-      "command": "npx",
-      "args": [
-        "--package=@hexsleeves/tailscale-mcp-server",
-        "tailscale-mcp-server"
-      ],
-      "env": {
-        "TAILSCALE_API_KEY": "your-api-key-here",
-        "TAILSCALE_TAILNET": "your-tailnet-name"
-      }
-    }
-  }
-}
-```
+## Capabilities
 
-#### Using Docker Hub
+Tools:
 
-```json
-{
-  "mcpServers": {
-    "tailscale": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "TAILSCALE_API_KEY=xxxxxxxxxxxxx",
-        "-e",
-        "TAILSCALE_TAILNET=your-tailnet",
-        "hexsleeves/tailscale-mcp-server:latest"
-      ]
-    }
-  }
-}
-```
+- Devices: `list_devices`, `device_action`, `manage_routes`.
+- Network: `get_network_status`, `connect_network`, `disconnect_network`,
+  `ping_peer`, `get_version`.
+- Administration: `get_tailnet_info`, `manage_acl`, `manage_dns`,
+  `manage_keys`, `manage_policy_file`, `manage_file_sharing`,
+  `manage_exit_nodes`, `manage_webhooks`, `manage_device_tags`.
 
-#### Using GitHub Container Registry
+Resources:
 
-```json
-{
-  "mcpServers": {
-    "tailscale-docker": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "TAILSCALE_API_KEY=xxxxxxxxxxxxx",
-        "-e",
-        "TAILSCALE_TAILNET=your-tailnet",
-        "ghcr.io/hexsleeves/tailscale-mcp-server:latest"
-      ]
-    }
-  }
-}
-```
+- `tailscale://tailnet/summary`
+- `tailscale://devices`
+- `tailscale://devices/{deviceId}`
+- `tailscale://acl/current`
 
-### Environment Variables
+Prompts:
+
+- `diagnose_tailnet_connectivity`
+- `review_acl_change`
+
+## Docker
+
+Build locally:
 
 ```bash
-# Required for API operations
-export TAILSCALE_API_KEY="your-api-key"
-export TAILSCALE_TAILNET="your-tailnet"
-
-# Optional: Custom API base URL
-export TAILSCALE_API_BASE_URL="https://api.tailscale.com"
-
-# Optional: Logging configuration
-export LOG_LEVEL="1"  # 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR
-export MCP_SERVER_LOG_FILE="tailscale-mcp-{timestamp}.log"  # Enable file logging
+docker build -t tailscale-mcp-server .
 ```
 
-## Available Tools
+Run HTTP mode on localhost:
 
-### Device Management
+```bash
+docker run --rm \
+  -e MCP_HTTP_BEARER_TOKEN="$MCP_HTTP_BEARER_TOKEN" \
+  -e TAILSCALE_OAUTH_CLIENT_ID="$TAILSCALE_OAUTH_CLIENT_ID" \
+  -e TAILSCALE_OAUTH_CLIENT_SECRET="$TAILSCALE_OAUTH_CLIENT_SECRET" \
+  -e TAILSCALE_TAILNET="-" \
+  -p 127.0.0.1:3000:3000 \
+  tailscale-mcp-server
+```
 
-- `list_devices` - List all devices in the Tailscale network
-- `device_action` - Perform actions on specific devices (authorize, deauthorize, delete, expire-key)
-- `manage_routes` - Enable or disable routes for devices
-
-### Network Operations
-
-- `get_network_status` - Get current network status from Tailscale CLI
-- `connect_network` - Connect to the Tailscale network
-- `disconnect_network` - Disconnect from the Tailscale network
-- `ping_peer` - Ping a peer device
-
-### System Information
-
-- `get_version` - Get Tailscale version information
-- `get_tailnet_info` - Get detailed network information
+For a sidecar deployment that exposes the server with private Tailscale Serve,
+see [deploy/README.md](deploy/README.md).
 
 ## Development
 
-### Local Development Setup
+```bash
+bun install
+bun run typecheck
+bun test
+bun run check
+bun run build
+```
 
-For local development and testing, clone the repository and set up the development environment:
+Full verification:
 
 ```bash
-# Clone the repository
-git clone https://github.com/HexSleeves/tailscale-mcp-server.git
-cd tailscale-mcp-server
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
+bun run qa:full
 ```
 
-### Environment Setup
-
-#### Quick Setup (Recommended)
+Security audit:
 
 ```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Create logs directory
-mkdir -p logs
-
-# Edit .env with your actual Tailscale credentials
-# TAILSCALE_API_KEY=your-actual-api-key
-# TAILSCALE_TAILNET=your-actual-tailnet
+bun audit
 ```
-
-The `.env.example` file contains all available configuration options with documentation. Key variables for testing:
-
-- **TAILSCALE_API_KEY**: Get from [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
-- **TAILSCALE_TAILNET**: Your organization/tailnet name
-- **LOG_LEVEL**: Set to `0` for debug logging during development
-- **MCP_SERVER_LOG_FILE**: Enable server logging to file
-- **MCP_LOG_FILE**: Enable test script logging to file
-
-### Local Connection to Claude Desktop
-
-For development, configure Claude Desktop to use your local build:
-
-#### Option 1: Direct Node Execution
-
-```json
-{
-  "mcpServers": {
-    "tailscale-dev": {
-      "command": "node",
-      "args": ["/path/to/your/tailscale-mcp-server/dist/index.js"],
-      "env": {
-        "TAILSCALE_API_KEY": "your-api-key-here",
-        "TAILSCALE_TAILNET": "your-tailnet-name",
-        "LOG_LEVEL": "0"
-      }
-    }
-  }
-}
-```
-
-#### Option 2: NPM Script
-
-```json
-{
-  "mcpServers": {
-    "tailscale-dev": {
-      "command": "npm",
-      "args": ["run", "start"],
-      "cwd": "/path/to/your/tailscale-mcp-server",
-      "env": {
-        "TAILSCALE_API_KEY": "your-api-key-here",
-        "TAILSCALE_TAILNET": "your-tailnet-name",
-        "LOG_LEVEL": "0"
-      }
-    }
-  }
-}
-```
-
-### Development Commands
-
-```bash
-# Build for development
-npm run build:dev
-
-# Build and watch for changes
-npm run build:watch
-
-# Run in development mode with auto-restart
-npm run dev
-
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-
-# Test with MCP Inspector
-npm run inspector
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-```
-
-### Publishing
-
-The project includes an interactive publishing script that handles version bumping and publishing to multiple registries:
-
-```bash
-# Run the interactive publish script
-npm run publish
-
-# Or run directly
-./scripts/publish.sh
-```
-
-The script will guide you through:
-
-1. **Version Bumping**: Choose between patch, minor, major, or skip
-2. **NPM Publishing**: Optionally publish to npm registry
-3. **Docker Hub**: Optionally build and publish Docker images
-4. **GitHub Container Registry**: Optionally publish to GHCR
-5. **Git Operations**: Automatically commit version changes and create tags
-
-#### Publishing Features
-
-- **Interactive prompts** for each publishing step
-- **Automatic version bumping** with semantic versioning
-- **Git integration** with automatic tagging and commits
-- **Multi-registry support** (npm, Docker Hub, GHCR)
-- **Safety checks** for uncommitted changes
-- **Colored output** for better visibility
-- **Error handling** with proper exit codes
-- **Performance optimized** with pre-calculated version previews
-
-#### Prerequisites for Publishing
-
-- **NPM**: Logged in with `npm login` and proper access to the package
-- **Docker Hub**: Logged in with `docker login`
-- **GHCR**: Logged in with `docker login ghcr.io` using a GitHub token
-- **Git**: Clean working directory (or confirmation to proceed with uncommitted changes)
-
-### Docker Development
-
-For Docker-based development:
-
-```bash
-# Build development image
-docker build -t tailscale-mcp-dev .
-
-# Run with development environment
-docker run -it --rm \
-  -v $(pwd):/app \
-  -v /app/node_modules \
-  -e TAILSCALE_API_KEY=your_api_key \
-  -e TAILSCALE_TAILNET=your_tailnet \
-  -e LOG_LEVEL=0 \
-  tailscale-mcp-dev
-
-# Or use Docker Compose for development
-docker-compose -f docker-compose.dev.yml up
-```
-
-### Project Structure
-
-```bash
-src/
-├── server.ts              # Main server implementation
-├── tools/                 # Modular tool definitions
-│   ├── index.ts           # Tool registry system
-│   ├── device-tools.ts    # Device management tools
-│   └── ...                # Additional tool modules
-├── tailscale/             # Tailscale integrations
-│   ├── tailscale-api.ts   # REST API client
-│   ├── tailscale-cli.ts   # CLI wrapper
-│   └── index.ts           # Exports
-├── types.ts               # Type definitions
-├── logger.ts              # Logging utilities
-└── index.ts               # Entry point
-```
-
-### Adding New Tools
-
-1. Create a new tool module in `src/tools/`:
-
-```typescript
-import { z } from "zod";
-import type { ToolModule, ToolContext } from "./index.js";
-
-const MyToolSchema = z.object({
-  param: z.string().describe("Description of parameter"),
-});
-
-async function myTool(
-  args: z.infer<typeof MyToolSchema>,
-  context: ToolContext,
-) {
-  // Implementation
-  return {
-    content: [{ type: "text", text: "Result" }],
-  };
-}
-
-export const myTools: ToolModule = {
-  tools: [
-    {
-      name: "my_tool",
-      description: "Description of what this tool does",
-      inputSchema: MyToolSchema,
-      handler: myTool,
-    },
-  ],
-};
-```
-
-2. Register the module in `src/server.ts`:
-
-```typescript
-import { myTools } from "./tools/my-tools.js";
-
-// In the constructor:
-this.toolRegistry.registerModule(myTools);
-```
-
-### Debugging
-
-Enable debug logging for development:
-
-```bash
-# Set environment variable
-export LOG_LEVEL=0
-
-# Or in .env file
-LOG_LEVEL=0
-MCP_SERVER_LOG_FILE=debug-{timestamp}.log
-```
-
-View logs in real-time:
-
-```bash
-# Follow server logs
-tail -f logs/debug-*.log
-
-# Or use Docker logs
-docker-compose logs -f tailscale-mcp
-```
-
-## API Reference
-
-### Environment Variables
-
-| Variable                 | Description                                 | Required | Default                     |
-| ------------------------ | ------------------------------------------- | -------- | --------------------------- |
-| `TAILSCALE_API_KEY`      | Tailscale API key                           | Yes\*    | -                           |
-| `TAILSCALE_TAILNET`      | Tailscale tailnet name                      | Yes\*    | -                           |
-| `TAILSCALE_API_BASE_URL` | API base URL                                | No       | `https://api.tailscale.com` |
-| `LOG_LEVEL`              | Logging level (0-3)                         | No       | `1` (INFO)                  |
-| `MCP_SERVER_LOG_FILE`    | Server log file path (supports {timestamp}) | No       | -                           |
-
-\*Required for API-based operations. CLI operations work without API credentials.
-
-### Tool Categories
-
-#### Device Tools
-
-- Device listing and filtering
-- Device authorization management
-- Route management per device
-
-#### Network Tools
-
-- Network status monitoring
-- Connection management
-- Peer connectivity testing
-
-#### Security Tools
-
-- ACL management
-- Device tagging
-- Network lock operations
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass: `npm test`
-6. Commit your changes: `git commit -m 'Add amazing feature'`
-7. Push to the branch: `git push origin feature/amazing-feature`
-8. Open a Pull Request
-
-### Development Guidelines
-
-- Use TypeScript for all new code
-- Add Zod schemas for input validation
-- Include tests for new tools
-- Follow the existing modular architecture
-- Update documentation for new features
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Support
-
-- [Issues](https://github.com/your-repo/issues) - Bug reports and feature requests
-- [Discussions](https://github.com/your-repo/discussions) - Questions and community support
-- [MCP Documentation](https://modelcontextprotocol.io) - Learn more about MCP
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
