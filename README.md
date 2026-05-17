@@ -7,6 +7,13 @@ It supports local `stdio` usage for desktop clients and an authenticated HTTP
 transport for private tailnet deployments. The server defaults to read-only
 access, localhost binding, and short-lived OAuth credentials where available.
 
+> **Fork notice.** Security-hardened fork of
+> [HexSleeves/tailscale-mcp](https://github.com/HexSleeves/tailscale-mcp): adds
+> REST path-segment encoding, https enforcement for `TAILSCALE_API_BASE_URL`,
+> rate-limit bucket eviction, and removes the unused legacy server stack.
+> Distributed as `tailscale-mcp-server` (npm) and
+> `@eyalm321/tailscale-mcp-server` (GitHub Packages).
+
 ## Features
 
 - Tailscale device, route, DNS, ACL, key, webhook, exit-node, and tag management.
@@ -28,6 +35,28 @@ access, localhost binding, and short-lived OAuth credentials where available.
 - Local Tailscale CLI for CLI-backed tools such as status, ping, connect, and
   disconnect.
 
+## Install
+
+From npm (unscoped, default registry):
+
+```bash
+bunx tailscale-mcp-server
+# or add as a dependency
+bun add tailscale-mcp-server
+```
+
+From GitHub Packages (scoped). Add to `.npmrc`:
+
+```
+@eyalm321:registry=https://npm.pkg.github.com
+```
+
+then:
+
+```bash
+bun add @eyalm321/tailscale-mcp-server
+```
+
 ## MCP Client Setup
 
 Use `stdio` for local MCP clients.
@@ -37,7 +66,7 @@ Use `stdio` for local MCP clients.
   "mcpServers": {
     "tailscale": {
       "command": "bunx",
-      "args": ["@hexsleeves/tailscale-mcp-server"],
+      "args": ["tailscale-mcp-server"],
       "env": {
         "TAILSCALE_OAUTH_CLIENT_ID": "your-client-id",
         "TAILSCALE_OAUTH_CLIENT_SECRET": "your-client-secret",
@@ -55,7 +84,7 @@ For API key compatibility:
   "mcpServers": {
     "tailscale": {
       "command": "bunx",
-      "args": ["@hexsleeves/tailscale-mcp-server"],
+      "args": ["tailscale-mcp-server"],
       "env": {
         "TAILSCALE_API_KEY": "tskey-...",
         "TAILSCALE_TAILNET": "-"
@@ -157,18 +186,6 @@ docker run --rm \
   -e TAILSCALE_TAILNET="-" \
   -p 127.0.0.1:3000:3000 \
   tailscale-mcp-server
-```
-
-Or use the published image:
-
-```bash
-docker run --rm \
-  -e MCP_HTTP_BEARER_TOKEN="$MCP_HTTP_BEARER_TOKEN" \
-  -e TAILSCALE_OAUTH_CLIENT_ID="$TAILSCALE_OAUTH_CLIENT_ID" \
-  -e TAILSCALE_OAUTH_CLIENT_SECRET="$TAILSCALE_OAUTH_CLIENT_SECRET" \
-  -e TAILSCALE_TAILNET="-" \
-  -p 127.0.0.1:3000:3000 \
-  hexsleeves/tailscale-mcp-server:latest
 ```
 
 For a sidecar deployment that exposes the server with private Tailscale Serve,
