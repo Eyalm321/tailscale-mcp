@@ -143,8 +143,7 @@ export class TailscaleCliClient {
         code?: number | string;
         stderr?: string;
       };
-      const stderr =
-        typeof err.stderr === "string" ? err.stderr.trim() : "";
+      const stderr = typeof err.stderr === "string" ? err.stderr.trim() : "";
 
       return {
         success: false,
