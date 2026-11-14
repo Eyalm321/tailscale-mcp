@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine AS deps
+FROM oven/bun:1.3.13-alpine@sha256:4de475389889577f346c636f956b42a5c31501b654664e9ae5726f94d7bb5349 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -7,7 +7,7 @@ FROM deps AS build
 COPY . .
 RUN bun run qa && bun run build
 
-FROM oven/bun:1-alpine AS production
+FROM oven/bun:1.3.13-alpine@sha256:4de475389889577f346c636f956b42a5c31501b654664e9ae5726f94d7bb5349 AS production
 WORKDIR /app
 ENV NODE_ENV=production
 ENV MCP_TRANSPORT=http
