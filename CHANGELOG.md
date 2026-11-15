@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.3] - Unreleased
+
+No tool or API changes. Same runtime support.
+
+### Security
+
+- `@modelcontextprotocol/sdk` 1.29.0 → 1.32.2, `zod` 4.3.6 → 4.6.7, `axios` 1.16.0 → 1.21.0. All high and critical findings in the express-side dependencies are fixed (proxy-addr, body-parser, qs, ip-address).
+- Remaining moderates (`hono`, `@hono/node-server`) are not reachable: hono is unused, and the opt-in HTTP mode uses only `@hono/node-server`'s getRequestListener (T581). The CI audit gate ignores exactly those advisory ids until the follow-up bump.
+- Every dependency version is at least 14 days old.
+
+### Maintenance
+
+- Dependabot (bun, GitHub Actions, Docker) with a 14-day cooldown.
+- Workflow actions and Docker base images are pinned to commit SHAs or digests.
+- Logger tests fixed for current bun.
+- npm publishing uses trusted publishing (OIDC).
+
 ## [1.0.0] - 2026-04-25
 
 ### Added
