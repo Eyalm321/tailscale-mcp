@@ -22,7 +22,7 @@ describe("Logger", () => {
 
   beforeEach(() => {
     // Reset environment variables
-    process.env.MCP_SERVER_LOG_FILE = undefined;
+    delete process.env.MCP_SERVER_LOG_FILE;
 
     stderrSpy = spyOn(process.stderr, "write").mockImplementation(
       () => true,
