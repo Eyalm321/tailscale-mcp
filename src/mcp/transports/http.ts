@@ -1,6 +1,6 @@
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import express from "express";
+import express, { type ErrorRequestHandler, type Express } from "express";
 import { createMcpServer } from "../../app/create-server.js";
 import type { AppConfig } from "../../config/env.js";
 import type { AppLogger } from "../../observability/logger.js";
@@ -8,14 +8,56 @@ import { createHttpAuthMiddleware } from "../../security/auth.js";
 import { createRateLimitMiddleware } from "../../security/rate-limit.js";
 import { TailscaleService } from "../../tailscale/service.js";
 
-export async function startHttpTransport({
+/**
+ * Turns any error that reaches express into a JSON-RPC error response instead
+ * of express's default HTML error page (which includes a stack trace outside
+ * production). Never echoes the error message or stack.
+ * - body is not valid JSON: 400, -32700 "Parse error"
+ * - any other 4xx error (e.g. 413 body too large, 415): that status, -32600
+ * - anything else: 500, -32603
+ */
+export const jsonRpcErrorHandler: ErrorRequestHandler = (
+  error,
+  _req,
+  res,
+  next,
+) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  const { type, status } = (error ?? {}) as {
+    type?: unknown;
+    status?: unknown;
+  };
+  let httpStatus = 500;
+  let rpcError = { code: -32603, message: "Internal error" };
+  if (type === "entity.parse.failed") {
+    httpStatus = 400;
+    rpcError = { code: -32700, message: "Parse error" };
+  } else if (
+    typeof status === "number" &&
+    Number.isInteger(status) &&
+    status >= 400 &&
+    status < 500
+  ) {
+    httpStatus = status;
+    rpcError = { code: -32600, message: "Invalid Request" };
+  }
+
+  res.status(httpStatus).json({ jsonrpc: "2.0", error: rpcError, id: null });
+};
+
+export function createHttpApp({
   config,
   logger,
+  tailscale,
 }: {
   config: AppConfig;
   logger: AppLogger;
-}): Promise<void> {
-  const tailscale = await TailscaleService.create({ config, logger });
+  tailscale: TailscaleService;
+}): Express {
   const app = createMcpExpressApp();
 
   app.disable("x-powered-by");
@@ -67,6 +109,23 @@ export async function startHttpTransport({
       id: null,
     });
   });
+
+  // Last in the stack, so it also catches errors from the SDK's JSON parser,
+  // the rate limiter, auth and the routes above.
+  app.use(jsonRpcErrorHandler);
+
+  return app;
+}
+
+export async function startHttpTransport({
+  config,
+  logger,
+}: {
+  config: AppConfig;
+  logger: AppLogger;
+}): Promise<void> {
+  const tailscale = await TailscaleService.create({ config, logger });
+  const app = createHttpApp({ config, logger, tailscale });
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(
