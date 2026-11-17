@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Security
+
+- `hono` 4.13.14 → 4.13.16 and `@hono/node-server` 1.19.17 → 2.1.6 (overrides; both come in through `@modelcontextprotocol/sdk`, whose range `^1.19.9 || ^2.0.5` includes 2.x). `bun audit` is clean at moderate and above, so the CI audit step no longer ignores the 7 hono / @hono/node-server advisories (T581).
+
 ## [1.2.3] - Unreleased
 
 No tool or API changes. Same runtime support.

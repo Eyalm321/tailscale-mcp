@@ -85,14 +85,4 @@ jobs:
         run: bash scripts/smoke-check-binary.sh ./dist/server 5
 
       - name: Audit dependencies
-        # Ignores exactly the 7 hono / @hono/node-server advisories that security ruled not reachable (T581).
-        # Remove with T531 (hono 4.13.16 + @hono/node-server 2.1.6, on/after 2026-11-16).
-        run: >-
-          bun audit --audit-level=moderate
-          --ignore=GHSA-4m76-xfj5-7975
-          --ignore=GHSA-h7mg-cq63-vhpq
-          --ignore=GHSA-46wx-v44x-9hh2
-          --ignore=GHSA-4h7h-rv7c-7m2v
-          --ignore=GHSA-3gg2-335m-rxc6
-          --ignore=GHSA-rmxm-3fg6-px4f
-          --ignore=GHSA-jpvv-r467-5p4w
+        run: bun audit --audit-level=moderate
