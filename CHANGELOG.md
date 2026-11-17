@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- MCP `serverInfo.version` reported a hard-coded `1.0.0` for every release. It now reports the package version, and a test fails if `src/version.ts` and `package.json` disagree.
+
 ## [1.2.4] - 2026-11-16
 
 No tool or API changes. Same runtime support.

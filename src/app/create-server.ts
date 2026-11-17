@@ -5,6 +5,7 @@ import { registerResources } from "../mcp/resources/index.js";
 import { registerTools } from "../mcp/tools/index.js";
 import type { AppLogger } from "../observability/logger.js";
 import { TailscaleService } from "../tailscale/service.js";
+import { SERVER_VERSION } from "../version.js";
 
 export interface ServerFactoryContext {
   config: AppConfig;
@@ -23,7 +24,7 @@ export async function createMcpServer({
   const server = new McpServer(
     {
       name: "tailscale-mcp-server",
-      version: "1.0.0",
+      version: SERVER_VERSION,
     },
     {
       capabilities: {
