@@ -8,7 +8,11 @@ All notable changes to this project are documented in this file.
 
 - `hono` 4.13.14 → 4.13.16 and `@hono/node-server` 1.19.17 → 2.1.6 (overrides; both come in through `@modelcontextprotocol/sdk`, whose range `^1.19.9 || ^2.0.5` includes 2.x). `bun audit` is clean at moderate and above, so the CI audit step no longer ignores the 7 hono / @hono/node-server advisories (T581).
 
-## [1.2.3] - Unreleased
+### Fixed
+
+- HTTP mode (`MCP_TRANSPORT=http`): an error that reached express (a body that is not valid JSON, a body over the size limit, ...) got express's default HTML error page, which includes a stack trace unless `NODE_ENV=production`. It now gets a JSON-RPC error with `id: null` and no error detail: 400 / -32700 "Parse error" for invalid JSON, the same 4xx status / -32600 "Invalid Request" for other client errors, and 500 / -32603 "Internal error" otherwise.
+
+## [1.2.3] - 2026-11-15
 
 No tool or API changes. Same runtime support.
 
