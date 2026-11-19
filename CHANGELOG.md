@@ -2,7 +2,9 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [1.2.5] - 2026-11-18
+
+No tool or API changes. Same runtime support.
 
 ### Fixed
 
