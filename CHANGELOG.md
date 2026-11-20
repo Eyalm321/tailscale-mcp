@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Requires Node 22 or later (`engines.node >=22`); Node 20 reached end of life in April 2026. CI and the publish build run on Node 22 (the npm job stays on Node 24 for trusted publishing). `@types/node` follows the lowest supported major (22).
+
 ## [1.2.5] - 2026-11-18
 
 No tool or API changes. Same runtime support.
