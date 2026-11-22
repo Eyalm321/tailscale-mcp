@@ -27,7 +27,7 @@ access, localhost binding, and short-lived OAuth credentials where available.
 
 ## Requirements
 
-- Node.js 20 or newer to run (`npx`). Bun also works.
+- Node.js 22 or newer to run (`npx`). Bun also works.
 - Tailscale API access through one of:
   - OAuth client credentials: `TAILSCALE_OAUTH_CLIENT_ID` and
     `TAILSCALE_OAUTH_CLIENT_SECRET`.
